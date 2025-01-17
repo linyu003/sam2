@@ -65,6 +65,7 @@ def show_anns(anns, borders=True):
 
 from sam2.build_sam import build_sam2
 from sam2.automatic_mask_generator import SAM2AutomaticMaskGenerator
+from sam2.utils.common_util import serialize_ndarray
 import time
 sam2_checkpoint = "../checkpoints/sam2.1_hiera_large.pt"
 model_cfg = "configs/sam2.1/sam2.1_hiera_l.yaml"
@@ -118,7 +119,9 @@ class RequestHandler(BaseHTTPRequestHandler):
                 result = gen_masks(image)
 
                 for r in result:
-                    print(r['segmentation']) 
+                    # print(r['segmentation']) 
+                    seg:np.ndarray = r['segmentation']
+                    r['segmentation'] = serialize_ndarray(seg)
                 
                 # 将结果转换为JSON格式
                 self.send_response(200)
