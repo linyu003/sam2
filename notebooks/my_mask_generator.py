@@ -89,8 +89,13 @@ import io
 import json
 
 class RequestHandler(BaseHTTPRequestHandler):
+
+    def do_GET(self):
+        print(F"received get request path: {self.path}, do nothing")
     def do_POST(self):
+        print(F"received post request path: {self.path}")
         if self.path == '/gen_mask':
+            print(F"/gen_mask processing")
             # 解析Content-Length头
             content_length = int(self.headers['Content-Length'])
             post_data = self.rfile.read(content_length)
@@ -113,7 +118,7 @@ class RequestHandler(BaseHTTPRequestHandler):
                 result = gen_masks(image)
 
                 for r in result:
-                    del r['segmentation']
+                    print(r['segmentation']) 
                 
                 # 将结果转换为JSON格式
                 self.send_response(200)
@@ -131,10 +136,10 @@ class RequestHandler(BaseHTTPRequestHandler):
             self.end_headers()
             self.wfile.write(b'Not Found')
 
-def run(server_class=HTTPServer, handler_class=RequestHandler, port=8001):
-    server_address = ('localhost', port)
+def run(server_class=HTTPServer, handler_class=RequestHandler, host='0.0.0.0', port=8001):
+    server_address = (host, port)
     httpd = server_class(server_address, handler_class)
-    print(f'Starting httpd on port {port}...')
+    print(f'Starting httpd on port {host}:{port}...')
     httpd.serve_forever()
 
 if __name__ == '__main__':
