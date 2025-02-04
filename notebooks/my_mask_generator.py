@@ -111,7 +111,7 @@ class RequestHandler(BaseHTTPRequestHandler):
 
     def do_POST(self):
         print(f"received post request path: {self.path}")
-        if self.path == "/gen_mask":
+        if self.path in ["/gen_mask", "/call/depth-anything/Depth-Anything-V2-Large-hf"]:
             print(f"/gen_mask processing")
             # 解析Content-Length头
             content_length = int(self.headers["Content-Length"])
@@ -133,12 +133,14 @@ class RequestHandler(BaseHTTPRequestHandler):
                 image = Image.open(image_file)
 
                 # 调用gen_masks方法
-                result = gen_masks(image)
-
-                for r in result:
-                    # print(r['segmentation'])
-                    seg: np.ndarray = r["segmentation"]
-                    r["segmentation"] = serialize_ndarray(seg)
+                if self.path == "/gen_mask":
+                    result = gen_masks(image)
+                    for r in result:
+                        # print(r['segmentation'])
+                        seg: np.ndarray = r["segmentation"]
+                        r["segmentation"] = serialize_ndarray(seg)
+                else:
+                    result = call_depth_anything(image)
 
                 # 将结果转换为JSON格式
                 self.send_response(200)
