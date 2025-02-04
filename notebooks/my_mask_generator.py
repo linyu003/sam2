@@ -6,6 +6,7 @@ os.environ["PYTORCH_ENABLE_MPS_FALLBACK"] = "1"
 import numpy as np
 import torch
 import matplotlib.pyplot as plt
+from models.pipeline_models import call_depth_anything
 from PIL import Image
 import cgi
 
@@ -141,6 +142,7 @@ class RequestHandler(BaseHTTPRequestHandler):
                         r["segmentation"] = serialize_ndarray(seg)
                 else:
                     result = call_depth_anything(image)
+                    result["depth"] = serialize_ndarray(result["depth"])
 
                 # 将结果转换为JSON格式
                 self.send_response(200)

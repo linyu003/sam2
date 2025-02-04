@@ -3,6 +3,7 @@ from PIL import Image
 import requests
 from typing import Any, Dict
 from abc import ABC, abstractmethod
+import numpy as np
 
 class BasePipelineModel(ABC):
     def __init__(self):
@@ -44,9 +45,17 @@ def call_depth_anything(image: Image) -> Dict[str, Any]:
     global _depth_model
     if _depth_model is None:
         _depth_model = DepthEstimationModel()
-    return _depth_model(image)
+    return {
+        "depth": np.asarray(_depth_model(image)["depth"]),
+    }
+
 
 if __name__ == "__main__":
-    image = Image.open("images/cars.jpg")
+    image = Image.open("notebooks/images/cars.jpg")
     result = call_depth_anything(image)
-    print(result)
+    i:Image = result["depth"]
+    i.show()
+    depth_array = np.asarray(result["depth"])
+    print(depth_array.shape)
+    print(depth_array.dtype)
+    print(depth_array)
