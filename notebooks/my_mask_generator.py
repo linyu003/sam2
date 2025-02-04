@@ -9,7 +9,7 @@ import matplotlib.pyplot as plt
 from models.pipeline_models import call_depth_anything
 from PIL import Image
 import cgi
-
+import base64
 # select the device for computation
 if torch.cuda.is_available():
     device = torch.device("cuda")
@@ -20,9 +20,14 @@ else:
 print(f"using device: {device}")
 
 if device.type == "cuda":
-    # use bfloat16 for the entire notebook
-    torch.autocast("cuda", dtype=torch.bfloat16).__enter__()
-    # turn on tfloat32 for Ampere GPUs (https://pytorch.org/docs/stable/notes/cuda.html#tensorfloat-32-tf32-on-ampere-devices)
+    # 创建两个上下文管理器，一个用于 SAM2，一个用于 depth-anything
+    sam2_autocast = torch.autocast("cuda", dtype=torch.bfloat16)
+    depth_autocast = torch.autocast("cuda", dtype=torch.float32)
+    
+    # 只为 SAM2 启用 bfloat16
+    sam2_autocast.__enter__()
+    
+    # 保持 TF32 设置不变
     if torch.cuda.get_device_properties(0).major >= 8:
         torch.backends.cuda.matmul.allow_tf32 = True
         torch.backends.cudnn.allow_tf32 = True
@@ -133,16 +138,22 @@ class RequestHandler(BaseHTTPRequestHandler):
                 image_file = form["image"].file
                 image = Image.open(image_file)
 
-                # 调用gen_masks方法
+                # 根据不同的路径使用不同的上下文管理器
                 if self.path == "/gen_mask":
                     result = gen_masks(image)
                     for r in result:
-                        # print(r['segmentation'])
                         seg: np.ndarray = r["segmentation"]
                         r["segmentation"] = serialize_ndarray(seg)
                 else:
-                    result = call_depth_anything(image)
-                    result["depth"] = serialize_ndarray(result["depth"])
+                    # 对 depth-anything 使用 float32
+                    with depth_autocast:
+                        result = call_depth_anything(image)
+                        img_byte_arr = io.BytesIO()
+                        result["depth"].save(img_byte_arr, format='PNG')
+                        
+                        result["depth"] = base64.b64encode(img_byte_arr.getvalue()).decode('utf-8')
+    
+                
 
                 # 将结果转换为JSON格式
                 self.send_response(200)
