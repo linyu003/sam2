@@ -6,7 +6,7 @@ os.environ["PYTORCH_ENABLE_MPS_FALLBACK"] = "1"
 import numpy as np
 import torch
 import matplotlib.pyplot as plt
-from models.pipeline_models import call_depth_anything
+from models.pipeline_models import call_depth_anything,MODEL_MICROSOFT_RESNET_50,MODEL_DEPTH_ANYTHING,call_classification_model
 from PIL import Image
 import cgi
 import base64
@@ -117,7 +117,7 @@ class RequestHandler(BaseHTTPRequestHandler):
 
     def do_POST(self):
         print(f"received post request path: {self.path}")
-        if self.path in ["/gen_mask", "/call/depth-anything/Depth-Anything-V2-Large-hf"]:
+        if self.path in ["/gen_mask"] or self.path.startswith("/call/"):
             print(f"/gen_mask processing")
             # 解析Content-Length头
             content_length = int(self.headers["Content-Length"])
@@ -145,15 +145,21 @@ class RequestHandler(BaseHTTPRequestHandler):
                         seg: np.ndarray = r["segmentation"]
                         r["segmentation"] = serialize_ndarray(seg)
                 else:
-                    # 对 depth-anything 使用 float32
-                    with depth_autocast:
-                        result = call_depth_anything(image)
+                    model_name = self.path[len("/call/"):]
+                    if model_name == MODEL_DEPTH_ANYTHING:
+                        # 对 depth-anything 使用 float32
+                        with depth_autocast:
+                            result = call_depth_anything(image)
+
+
                         img_byte_arr = io.BytesIO()
                         result["depth"].save(img_byte_arr, format='PNG')
                         
                         result["depth"] = base64.b64encode(img_byte_arr.getvalue()).decode('utf-8')
-    
+                    elif model_name == MODEL_MICROSOFT_RESNET_50:
+                        result = call_classification_model(image)
                 
+
 
                 # 将结果转换为JSON格式
                 self.send_response(200)
@@ -186,16 +192,3 @@ def run(
 if __name__ == "__main__":
     run()
 
-
-# In[1]
-# print(masks)
-
-# print(len(masks))
-# print(masks[0].keys())
-
-# plt.figure(figsize=(20, 20))
-# plt.imshow(image)
-# show_anns(masks)
-# plt.axis('off')
-# plt.show()
-# %%
