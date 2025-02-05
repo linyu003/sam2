@@ -96,8 +96,25 @@ class ClassificationModel(BasePipelineModel):
         # 获取概率大于等于10%的索引
         threshold = 0.10  # 10%
         mask = probabilities >= threshold
+        
+        # 如果没有预测结果超过阈值，返回概率最高的3个结果
+        if not mask.any():
+            top_k = 3
+            top_probs, top_indices = torch.topk(probabilities, k=top_k)
+            return [{
+                "label": self.model.config.id2label[idx.item()],
+                "score": prob.item()
+            } for prob, idx in zip(top_probs, top_indices)]
+            
         filtered_probs = probabilities[mask]
         filtered_indices = torch.nonzero(mask).squeeze()
+        
+        # 修改处理单个结果的情况
+        if filtered_probs.numel() == 1:  # 使用numel()替代dim()检查
+            return [{
+                "label": self.model.config.id2label[filtered_indices.item()],
+                "score": filtered_probs.item()
+            }]
         
         # 按概率降序排序
         sorted_indices = torch.argsort(filtered_probs, descending=True)
