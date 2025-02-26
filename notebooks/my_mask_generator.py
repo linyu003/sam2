@@ -6,7 +6,7 @@ os.environ["PYTORCH_ENABLE_MPS_FALLBACK"] = "1"
 import numpy as np
 import torch
 import matplotlib.pyplot as plt
-from models.pipeline_models import call_depth_anything,MODEL_MICROSOFT_RESNET_50,MODEL_DEPTH_ANYTHING,call_classification_model
+from models.pipeline_models import call_depth_anything,MODEL_MICROSOFT_RESNET_50,MODEL_DEPTH_ANYTHING,call_classification_model,call_blip_captioning,MODEL_BLIP_IMAGE_CAPTIONING
 from PIL import Image
 import cgi
 import base64
@@ -158,7 +158,14 @@ class RequestHandler(BaseHTTPRequestHandler):
                         result["depth"] = base64.b64encode(img_byte_arr.getvalue()).decode('utf-8')
                     elif model_name == MODEL_MICROSOFT_RESNET_50:
                         result = call_classification_model(image)
-                
+                    elif model_name == MODEL_BLIP_IMAGE_CAPTIONING:
+                        result ={
+                            "generated_text": call_blip_captioning(image)
+                        } 
+                    else:
+                        raise ValueError(f"Unknown model name: {model_name}")
+
+
 
 
                 # 将结果转换为JSON格式

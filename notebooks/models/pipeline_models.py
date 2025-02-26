@@ -6,10 +6,12 @@ from abc import ABC, abstractmethod
 import numpy as np
 import io
 from transformers import AutoImageProcessor, ResNetForImageClassification
+from transformers import BlipProcessor, BlipForConditionalGeneration
 import torch
 
 MODEL_MICROSOFT_RESNET_50 = "microsoft/resnet-50"
 MODEL_DEPTH_ANYTHING = "depth-anything/Depth-Anything-V2-Large-hf"
+MODEL_BLIP_IMAGE_CAPTIONING = "Salesforce/blip-image-captioning-base"
 
 class BasePipelineModel(ABC):
     def __init__(self):
@@ -154,7 +156,35 @@ def call_classification_model(image: Image) -> List[Dict[str, Any]]:
     if _classification_model is None:
         _classification_model = ClassificationModel()
     return _classification_model(image)
+class BlipCaptioningModel:
+    def __init__(self):
+        self.processor = BlipProcessor.from_pretrained("Salesforce/blip-image-captioning-base")
+        self.model = BlipForConditionalGeneration.from_pretrained("Salesforce/blip-image-captioning-base").to("cuda")
+
+    def __call__(self, image: Image) -> str:
+        # unconditional image captioning
+        inputs = self.processor(image, return_tensors="pt").to("cuda")
+        out = self.model.generate(**inputs)
+        return self.processor.decode(out[0], skip_special_tokens=True)
+
+# 全局单例实例
+_blip_model = None
+
+def call_blip_captioning(image: Image) -> str:
+    """
+    调用BLIP图像描述模型的全局函数
+    
+    Args:
+        image: PIL Image对象
+    Returns:
+        str: 生成的图像描述文本
+    """
+    global _blip_model
+    if _blip_model is None:
+        _blip_model = BlipCaptioningModel()
+    return _blip_model(image)
 
 if __name__ == "__main__":
-    test_classification_model()
+    # test_classification_model()
+    call_blip_captioning(image=None)
 
