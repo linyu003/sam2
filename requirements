@@ -88,8 +88,6 @@ Pygments==2.19.1
 pyparsing==3.2.1
 python-dateutil==2.9.0.post0
 python-json-logger==3.2.1
-pywin32==308
-pywinpty==2.0.14
 PyYAML==6.0.2
 pyzmq==26.2.0
 referencing==0.35.1
@@ -99,7 +97,6 @@ rfc3339-validator==0.1.4
 rfc3986-validator==0.1.1
 rpds-py==0.22.3
 safetensors==0.5.2
--e git+ssh://git@github.com/linyu003/sam2.git@f240450df6d749a5ca5b8015f34d57a7cce2a325#egg=SAM_2
 Send2Trash==1.8.3
 six==1.17.0
 sniffio==1.3.1
@@ -110,8 +107,6 @@ terminado==0.18.1
 tinycss2==1.4.0
 tokenizers==0.21.0
 tomli==2.2.1
-torch @ file:///C:/Users/baohe/Downloads/torch-2.5.1%2Bcu118-cp310-cp310-win_amd64.whl
-torchvision==0.20.1+cu118
 tornado==6.4.2
 tqdm==4.67.1
 traitlets==5.14.3

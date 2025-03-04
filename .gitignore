@@ -10,3 +10,5 @@ outputs/*
 checkpoints/*.pt
 demo/backend/checkpoints/*.pt
 /venv
+/venv2
+**/.ipynb_checkpoints/

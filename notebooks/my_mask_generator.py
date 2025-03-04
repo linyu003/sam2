@@ -188,7 +188,7 @@ class RequestHandler(BaseHTTPRequestHandler):
 
 
 def run(
-    server_class=HTTPServer, handler_class=RequestHandler, host="0.0.0.0", port=8001
+    server_class=HTTPServer, handler_class=RequestHandler, host="0.0.0.0", port=10001
 ):
     server_address = (host, port)
     httpd = server_class(server_address, handler_class)
