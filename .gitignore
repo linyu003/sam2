@@ -12,3 +12,5 @@ demo/backend/checkpoints/*.pt
 /venv
 /venv2
 **/.ipynb_checkpoints/
+*.jpeg
+*.jpg
