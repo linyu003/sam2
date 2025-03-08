@@ -8,7 +8,7 @@ from qwen_vl_utils import process_vision_info
 from typing import Any, Dict, List
 from PIL import Image
 import logging
-
+from threading import Lock
 log = logging.getLogger(__name__)
 
 # default: Load the model on the available device(s)
@@ -58,7 +58,10 @@ class Qwen2_5_VL:
         )
         self.processor = AutoProcessor.from_pretrained(self.model_name.value)
     
-    def call_model(self, image: Image.Image) -> Dict[str, Any]:
+    def call_model(self, image: Image.Image, prompt:str = None) -> Dict[str, Any]:
+        if prompt is None or prompt.strip() == "":
+            prompt = "Describe this image with no more than 20 words."
+
         if self.model is None or self.processor is None:
             log.warn("model or processor is not loaded")
             self.load_model()
@@ -77,7 +80,7 @@ class Qwen2_5_VL:
                         # "image": "https://qianwen-res.oss-cn-beijing.aliyuncs.com/Qwen-VL/assets/demo.jpeg",
                         "image": f"file://{image_path.as_posix()}"
                     },
-                    {"type": "text", "text": "Describe this image with no more than 20 words."},
+                    {"type": "text", "text": prompt},
                 ],
             }
         ]
@@ -97,21 +100,31 @@ class Qwen2_5_VL:
         return {
             "description_sentence": output_text
         }
-    
-def call_model(model_name:str|ModelName, image:Image.Image) -> Dict[str, Any]:
+
+model_map = {}
+lock_for_model_map = Lock()
+
+def get_model(model_name:ModelName) -> Qwen2_5_VL:
+    if model_name in model_map:
+        return model_map[model_name]
+    with lock_for_model_map:
+        if model_name in model_map:
+            return model_map[model_name]
+        model = Qwen2_5_VL(model_name)
+        model.load_model()
+        model_map[model_name] = model
+        return model
+def call_model(model_name:str|ModelName, image:Image.Image, prompt:str = None) -> Dict[str, Any]:
     if isinstance(model_name, str):
         model_name = ModelName.get(model_name)
     model_name:ModelName
-    qwen2_5_vl_awq = Qwen2_5_VL(model_name)
-    qwen2_5_vl_awq.load_model()
-    return qwen2_5_vl_awq.call_model(image)
+    model = get_model(model_name)
+    return model.call_model(image, prompt)
 
 if __name__ == "__main__":
     for i in range(10):
         start_time = time.time()
-        image = Image.open("qwen_images/groceries.jpg")
-        qwen2_5_vl_awq = Qwen2_5_VL(ModelName.QWEN2_5_VL_7B_INSTRUCT_AWQ)
-        qwen2_5_vl_awq.load_model()
-        print(qwen2_5_vl_awq.call_model(image))
+        image = Image.open("images/groceries.jpg")
+        print(call_model(ModelName.QWEN2_5_VL_7B_INSTRUCT, image))
         time_cost = time.time() - start_time
         print(f"time cost: {time_cost} seconds for {i+1} times")

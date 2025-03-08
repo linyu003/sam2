@@ -71,6 +71,7 @@ _sam2_model = None
 lock_for_init = threading.Lock()
 
 def init_sam2_model():
+    global _sam2_model
     if _sam2_model is None:
         with lock_for_init:
             if _sam2_model is None:
@@ -81,6 +82,7 @@ def init_sam2_model():
                 _sam2_model = Sam2_Model(sam2_checkpoint, model_cfg, device)
 
 def call_sam2(image: Image):
+    global _sam2_model
     init_sam2_model()
     result =  _sam2_model.gen_masks(image)
     for r in result:
