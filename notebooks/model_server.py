@@ -12,7 +12,7 @@ from http.server import BaseHTTPRequestHandler, HTTPServer
 from PIL import Image
 import io
 import json
-import my_mask_generator
+import notebooks.sam2 as sam2
 
 
 if torch.cuda.is_available():
@@ -71,7 +71,7 @@ class RequestHandler(BaseHTTPRequestHandler):
 
                 # 根据不同的路径使用不同的上下文管理器
                 if self.path == "/gen_mask":
-                    result = my_mask_generator.call_sam2(image)
+                    result = sam2.call_sam2(image)
                 else:
                     model_name = self.path[len("/call/"):]
                     if model_name == MODEL_DEPTH_ANYTHING:
