@@ -12,7 +12,7 @@ from http.server import BaseHTTPRequestHandler, HTTPServer
 from PIL import Image
 import io
 import json
-import notebooks.sam2 as sam2
+import notebooks.models.sam2 as sam2
 
 
 if torch.cuda.is_available():
