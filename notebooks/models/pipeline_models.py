@@ -1,3 +1,4 @@
+import base64
 from transformers import pipeline
 from PIL import Image
 import requests
@@ -8,10 +9,12 @@ import io
 from transformers import AutoImageProcessor, ResNetForImageClassification
 from transformers import BlipProcessor, BlipForConditionalGeneration
 import torch
+import threading
 
 MODEL_MICROSOFT_RESNET_50 = "microsoft/resnet-50"
 MODEL_DEPTH_ANYTHING = "depth-anything/Depth-Anything-V2-Large-hf"
 MODEL_BLIP_IMAGE_CAPTIONING = "Salesforce/blip-image-captioning-base"
+MODEL_SAM2 = "sam2"
 class BasePipelineModel(ABC):
     def __init__(self):
         self.pipe = None
@@ -33,31 +36,36 @@ class DepthEstimationModel(BasePipelineModel):
             task="depth-estimation", 
             model=MODEL_DEPTH_ANYTHING
         )
+        self.autocast = torch.autocast("cuda", dtype=torch.float32)
     
     def __call__(self, image: Image) -> Dict[str, Any]:
-        return self.pipe(image)
+        with self.autocast:
+            return self.pipe(image)
 
 # 全局单例实例
 _depth_model = None
 
-def call_depth_anything(image: Image) -> Dict[str, Any]:
-    """
-    调用深度估计模型的全局函数
-    
-    Args:
-        image: PIL Image对象
-    Returns:
-        包含深度信息的字典，其中depth为PIL Image对象
-    """
+lock_for_init = threading.Lock()
+
+def init_depth_model():
     global _depth_model
     if _depth_model is None:
-        _depth_model = DepthEstimationModel()
+        with lock_for_init:
+            if _depth_model is None:
+                _depth_model = DepthEstimationModel()
+
+def call_depth_anything(image: Image) -> Dict[str, Any]:
+    global _depth_model
+    init_depth_model()
     depth_result = _depth_model(image)
     depth_image: Image = depth_result["depth"]
-
-    return {
+    result =  {
         "depth": depth_image
     }
+    img_byte_arr = io.BytesIO()
+    result["depth"].save(img_byte_arr, format='PNG')
+    result["depth"] = base64.b64encode(img_byte_arr.getvalue()).decode('utf-8')
+    return result
 
 def test_depth_anything():
     image = Image.open("notebooks/images/cars.jpg")
@@ -136,6 +144,15 @@ class ClassificationModel(BasePipelineModel):
 # 全局单例实例
 _classification_model = None
 
+lock_for_init = threading.Lock()
+
+def init_classification_model():
+    global _classification_model
+    if _classification_model is None:
+        with lock_for_init:
+            if _classification_model is None:
+                _classification_model = ClassificationModel()
+
 def call_classification_model(image: Image) -> List[Dict[str, Any]]:
     """
     调用分类模型的全局函数
@@ -152,8 +169,8 @@ def call_classification_model(image: Image) -> List[Dict[str, Any]]:
         ]
     """
     global _classification_model
-    if _classification_model is None:
-        _classification_model = ClassificationModel()
+    init_classification_model()
+
     return _classification_model(image)
 class BlipCaptioningModel:
     def __init__(self):
@@ -168,6 +185,15 @@ class BlipCaptioningModel:
 
 # 全局单例实例
 _blip_model = None
+lock_for_init = threading.Lock()
+
+def init_blip_model():
+    global _blip_model
+    if _blip_model is None:
+        with lock_for_init:
+            if _blip_model is None:
+                _blip_model = BlipCaptioningModel()
+
 
 def call_blip_captioning(image: Image) -> str:
     """
@@ -179,9 +205,10 @@ def call_blip_captioning(image: Image) -> str:
         str: 生成的图像描述文本
     """
     global _blip_model
-    if _blip_model is None:
-        _blip_model = BlipCaptioningModel()
-    return _blip_model(image)
+    init_blip_model()
+    return {
+        "generated_text": _blip_model(image)
+    }
 
 if __name__ == "__main__":
     # test_classification_model()

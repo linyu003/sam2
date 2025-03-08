@@ -54,17 +54,20 @@ class Sam2_Model:
     def __init__(self,ckpt_path:str,model_cfg_path:str,device:torch.device):
         self.sam2 = build_sam2(ckpt_path, model_cfg_path, device=device, apply_postprocessing=False)
         self.mask_generator = SAM2AutomaticMaskGenerator(self.sam2)
+        self.autocast = torch.autocast("cuda", dtype=torch.bfloat16)
 
     def gen_masks(self, image: Image):
         image = np.array(image.convert("RGB"))
         start_time = time.time()
-        masks = self.mask_generator.generate(image)
+        with self.autocast:
+            masks = self.mask_generator.generate(image)
         print(f"Time taken: {time.time() - start_time} seconds")
         return masks
 
 
 
 _sam2_model = None
+
 lock_for_init = threading.Lock()
 
 def init_sam2_model():
