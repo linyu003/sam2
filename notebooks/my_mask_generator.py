@@ -40,6 +40,8 @@ elif device.type == "mps":
 
 np.random.seed(3)
 
+from models import qwen2_5_vl_awq
+
 
 def show_anns(anns, borders=True):
     if len(anns) == 0:
@@ -161,7 +163,9 @@ class RequestHandler(BaseHTTPRequestHandler):
                     elif model_name == MODEL_BLIP_IMAGE_CAPTIONING:
                         result ={
                             "generated_text": call_blip_captioning(image)
-                        } 
+                        }
+                    elif model_name == qwen2_5_vl_awq.model_name:
+                        result = qwen2_5_vl_awq.call_qwen2_5_vl_awq(image)
                     else:
                         raise ValueError(f"Unknown model name: {model_name}")
 

@@ -12,7 +12,6 @@ import torch
 MODEL_MICROSOFT_RESNET_50 = "microsoft/resnet-50"
 MODEL_DEPTH_ANYTHING = "depth-anything/Depth-Anything-V2-Large-hf"
 MODEL_BLIP_IMAGE_CAPTIONING = "Salesforce/blip-image-captioning-base"
-
 class BasePipelineModel(ABC):
     def __init__(self):
         self.pipe = None
