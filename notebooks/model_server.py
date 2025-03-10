@@ -60,7 +60,7 @@ class RequestHandler(BaseHTTPRequestHandler):
         if "image" in form:
             image_file = form["image"].file
             image = Image.open(image_file)
-            params = json.loads(form.getfirst("params", "{}"))
+            params = json.loads(form.getvalue("params", "{}"))
             model_name = self.path[len("/call/"):]
             if model_name == MODEL_DEPTH_ANYTHING:
                 result = call_depth_anything(image)
