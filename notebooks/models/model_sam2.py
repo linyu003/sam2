@@ -76,10 +76,10 @@ def init_sam2_model():
         with lock_for_init:
             if _sam2_model is None:
                 sam2_checkpoint = "../checkpoints/sam2.1_hiera_large.pt"
+                # sam2_checkpoint = r"C:\Users\baohe\Documents\projs\sam2\checkpoints\sam2.1_hiera_large.pt"
                 model_cfg = "configs/sam2.1/sam2.1_hiera_l.yaml"
                 device = torch.device("cuda")
-                global _sam2_model
-                _sam2_model = Sam2_Model(sam2_checkpoint, model_cfg, device)
+                _sam2_model = Sam2_Model( model_cfg,sam2_checkpoint, device)
 
 def call_sam2(image: Image):
     global _sam2_model

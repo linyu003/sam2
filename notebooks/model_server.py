@@ -14,6 +14,7 @@ import cgi
 import base64
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from PIL import Image
+import PIL
 import io
 import json
 
@@ -58,28 +59,53 @@ class RequestHandler(BaseHTTPRequestHandler):
 
         # 获取文件内容
         if "image" in form:
-            image_file = form["image"].file
-            image = Image.open(image_file)
-            params = json.loads(form.getvalue("params", "{}"))
-            model_name = self.path[len("/call/"):]
-            if model_name == MODEL_DEPTH_ANYTHING:
-                result = call_depth_anything(image)
-            elif model_name == MODEL_MICROSOFT_RESNET_50:
-                result = call_classification_model(image)
-            elif model_name == MODEL_BLIP_IMAGE_CAPTIONING:
-                result = call_blip_captioning(image)
-            elif model_name == MODEL_SAM2:
-                import notebooks.models.sam2 as sam2
-                result = sam2.call_sam2(image)
-            elif qwen2_5_vl_awq.ModelName.get(model_name) is not None:
-                result = qwen2_5_vl_awq.call_model(model_name, image, **params)
-            else:
-                raise ValueError(f"Unknown model name: {model_name}")
-            # 将结果转换为JSON格式
-            self.send_response(200)
-            self.send_header("Content-type", "application/json")
-            self.end_headers()
-            self.wfile.write(json.dumps(result).encode("utf-8"))
+            try:
+                image_file = form["image"].file
+                image_data = image_file.read()
+                image = Image.open(io.BytesIO(image_data))
+                params = json.loads(form.getvalue("params", "{}"))
+                model_name = self.path[len("/call/"):]
+                if model_name == MODEL_DEPTH_ANYTHING:
+                    result = call_depth_anything(image)
+                elif model_name == MODEL_MICROSOFT_RESNET_50:
+                    result = call_classification_model(image)
+                elif model_name == MODEL_BLIP_IMAGE_CAPTIONING:
+                    result = call_blip_captioning(image)
+                elif model_name == MODEL_SAM2:
+                    import notebooks.models.model_sam2 as model_sam2
+                    result = model_sam2.call_sam2(image)
+                elif qwen2_5_vl_awq.ModelName.get(model_name) is not None:
+                    result = qwen2_5_vl_awq.call_model(model_name, image, **params)
+                else:
+                    raise ValueError(f"Unknown model name: {model_name}")
+                # 将结果转换为JSON格式
+                self.send_response(200)
+                self.send_header("Content-type", "application/json")
+                self.end_headers()
+                self.wfile.write(json.dumps(result).encode("utf-8"))
+            except PIL.UnidentifiedImageError as e:
+                print(f"error: {e}")
+                # print stack trace
+                import traceback
+                traceback.print_exc()
+                self.send_response(400)
+                self.send_header("Content-type", "application/json")
+                self.end_headers()
+                self.wfile.write(
+                    json.dumps({"error": "Invalid image format"}).encode("utf-8")
+                )
+                return
+            except Exception as e:
+                print(f"error: {e}")
+                import traceback
+                traceback.print_exc()
+                self.send_response(500)
+                self.send_header("Content-type", "application/json")
+                self.end_headers()
+                self.wfile.write(
+                    json.dumps({"error": f"Server error: {str(e)}"}).encode("utf-8")
+                )
+                return
         else:
             self.send_response(400)
             self.send_header("Content-type", "application/json")
@@ -87,6 +113,7 @@ class RequestHandler(BaseHTTPRequestHandler):
             self.wfile.write(
                 json.dumps({"error": "No image provided"}).encode("utf-8")
             )
+
 def parse_params(argv:list[str]) -> dict[str, Any]:
     import argparse
     parser = argparse.ArgumentParser(description='启动模型服务器')
@@ -106,8 +133,8 @@ def run(
         if qwen2_5_vl_awq.ModelName.get(model) is not None:
             qwen2_5_vl_awq.get_model(qwen2_5_vl_awq.ModelName.get(model))
         elif model == MODEL_SAM2:
-            import notebooks.models.sam2 as sam2
-            sam2.init_sam2_model()
+            import notebooks.models.model_sam2 as model_sam2
+            model_sam2.init_sam2_model()
         elif model == MODEL_DEPTH_ANYTHING:
             pipeline_models.init_depth_model()
         elif model == MODEL_MICROSOFT_RESNET_50:
